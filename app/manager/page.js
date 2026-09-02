@@ -13,7 +13,8 @@ export default function ManagerPage() {
   const [loading, setLoading] = useState(true)
 
   async function fetchBillRequests() {
-    // Get all orders where the customer asked for the bill and it's not paid yet
+    // Get all orders where the customer requested the bill
+    // and the order has not been paid yet.
     const { data, error } = await supabase
       .from('orders')
       .select(`
@@ -37,65 +38,150 @@ export default function ManagerPage() {
     } else {
       setBillRequests(data)
     }
+
     setLoading(false)
   }
 
   useEffect(() => {
     fetchBillRequests()
+
     const interval = setInterval(fetchBillRequests, 5000)
+
     return () => clearInterval(interval)
   }, [])
 
-  // Group individual orders by table, since a table might have multiple orders (rounds)
+  // Group orders by table.
+  // A table can have multiple orders during one session.
   function groupByTable(orders) {
     const grouped = {}
+
     orders.forEach((order) => {
       const tableNum = order.restaurant_tables?.table_number
+
       if (!grouped[tableNum]) {
         grouped[tableNum] = []
       }
+
       grouped[tableNum].push(order)
     })
+
     return grouped
   }
 
+  // Calculate total of all orders belonging to one table.
   function calculateTableTotal(orders) {
-    return orders.reduce((sum, order) => sum + Number(order.total), 0)
+    return orders.reduce(
+      (sum, order) => sum + Number(order.total || 0),
+      0
+    )
   }
 
   async function markAsPaid(orders) {
-    const orderIds = orders.map((o) => o.id)
+    if (!orders || orders.length === 0) {
+      return
+    }
 
-    const { error } = await supabase
+    const orderIds = orders.map((order) => order.id)
+
+    // --------------------------------------------------
+    // STEP 1:
+    // Mark all orders for this table as PAID
+    // --------------------------------------------------
+    const { error: orderError } = await supabase
       .from('orders')
-      .update({ status: 'paid', bill_requested: false })
+      .update({
+        status: 'paid',
+        bill_requested: false,
+      })
       .in('id', orderIds)
 
-    if (error) {
-      alert('Error marking as paid')
-      console.error(error)
-    } else {
-      fetchBillRequests()
+    if (orderError) {
+      alert('Error marking orders as paid')
+      console.error(orderError)
+      return
     }
+
+    // --------------------------------------------------
+    // STEP 2:
+    // Find the restaurant table connected to these orders
+    // --------------------------------------------------
+    const { data: orderTableData, error: tableLookupError } =
+      await supabase
+        .from('orders')
+        .select('table_id')
+        .eq('id', orderIds[0])
+        .single()
+
+    if (tableLookupError || !orderTableData) {
+      alert(
+        'Bill was paid, but the table session could not be closed.'
+      )
+
+      console.error(tableLookupError)
+
+      fetchBillRequests()
+      return
+    }
+
+    // --------------------------------------------------
+    // STEP 3:
+    // Close the table session
+    //
+    // occupied = customer can order
+    // closed   = customer cannot place another order
+    // --------------------------------------------------
+    const { error: tableError } = await supabase
+      .from('restaurant_tables')
+      .update({
+        status: 'closed',
+      })
+      .eq('id', orderTableData.table_id)
+
+    if (tableError) {
+      alert(
+        'Bill was paid, but the table session could not be closed.'
+      )
+
+      console.error(tableError)
+      return
+    }
+
+    // --------------------------------------------------
+    // STEP 4:
+    // Refresh manager screen
+    // --------------------------------------------------
+    fetchBillRequests()
   }
 
   if (loading) {
-    return <p style={{ padding: 20 }}>Loading bill requests...</p>
+    return (
+      <p style={{ padding: 20 }}>
+        Loading bill requests...
+      </p>
+    )
   }
 
   const grouped = groupByTable(billRequests)
   const tableNumbers = Object.keys(grouped)
 
   return (
-    <div style={{ padding: 20, fontFamily: 'Arial, sans-serif' }}>
+    <div
+      style={{
+        padding: 20,
+        fontFamily: 'Arial, sans-serif',
+      }}
+    >
       <h1>Manager — Bill Requests</h1>
 
-      {tableNumbers.length === 0 && <p>No pending bill requests right now.</p>}
+      {tableNumbers.length === 0 && (
+        <p>No pending bill requests right now.</p>
+      )}
 
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+          gridTemplateColumns:
+            'repeat(auto-fill, minmax(300px, 1fr))',
           gap: 15,
         }}
       >
@@ -113,21 +199,50 @@ export default function ManagerPage() {
                 background: '#fff5f5',
               }}
             >
-              <h2 style={{ margin: 0 }}>Table {tableNum}</h2>
-              <p style={{ color: '#d9534f', fontWeight: 'bold' }}>
+              <h2 style={{ margin: 0 }}>
+                Table {tableNum}
+              </h2>
+
+              <p
+                style={{
+                  color: '#d9534f',
+                  fontWeight: 'bold',
+                }}
+              >
                 💰 Bill Requested
               </p>
 
               {orders.map((order) => (
-                <div key={order.id} style={{ marginBottom: 10, paddingLeft: 10 }}>
-                  <p style={{ margin: '5px 0', fontSize: 13, color: '#555' }}>
+                <div
+                  key={order.id}
+                  style={{
+                    marginBottom: 10,
+                    paddingLeft: 10,
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: '5px 0',
+                      fontSize: 13,
+                      color: '#555',
+                    }}
+                  >
                     Order #{order.id} — {order.status}
                   </p>
-                  <ul style={{ margin: 0, paddingLeft: 18 }}>
+
+                  <ul
+                    style={{
+                      margin: 0,
+                      paddingLeft: 18,
+                    }}
+                  >
                     {order.order_items.map((item) => (
                       <li key={item.id}>
-                        {item.quantity}x {item.menu_items?.name} — Rs.{' '}
-                        {item.menu_items?.price * item.quantity}
+                        {item.quantity}x{' '}
+                        {item.menu_items?.name} — Rs.{' '}
+                        {Number(
+                          item.menu_items?.price || 0
+                        ) * Number(item.quantity || 0)}
                       </li>
                     ))}
                   </ul>
@@ -135,7 +250,13 @@ export default function ManagerPage() {
               ))}
 
               <hr />
-              <p style={{ fontSize: 18, fontWeight: 'bold' }}>
+
+              <p
+                style={{
+                  fontSize: 18,
+                  fontWeight: 'bold',
+                }}
+              >
                 Total: Rs. {total}
               </p>
 
@@ -148,6 +269,8 @@ export default function ManagerPage() {
                   border: 'none',
                   borderRadius: 5,
                   width: '100%',
+                  cursor: 'pointer',
+                  fontSize: 16,
                 }}
               >
                 Mark as Paid
