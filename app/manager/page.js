@@ -8,17 +8,18 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 )
 
+const STATUS_STYLES = {
+  pending: { label: 'New', bg: 'bg-[#E8A93A]/15', text: 'text-[#946A1C]', dot: 'bg-[#E8A93A]' },
+  received: { label: 'Received', bg: 'bg-[#5B7FA6]/15', text: 'text-[#3A5A7A]', dot: 'bg-[#5B7FA6]' },
+  preparing: { label: 'Preparing', bg: 'bg-[#8B5FA8]/15', text: 'text-[#6B3F87]', dot: 'bg-[#8B5FA8]' },
+  ready: { label: 'Ready', bg: 'bg-[#55684A]/15', text: 'text-[#3E4D36]', dot: 'bg-[#55684A]' },
+}
+
 export default function ManagerPage() {
-    async function logout() {
-    document.cookie = 'manager_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC'
-    window.location.href = '/manager/login'
-  }
-  const [billRequests, setBillRequests] = useState([])
+  const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
 
-  async function fetchBillRequests() {
-    // Get all orders where the customer requested the bill
-    // and the order has not been paid yet.
+  async function fetchOrders() {
     const { data, error } = await supabase
       .from('orders')
       .select(`
@@ -26,264 +27,223 @@ export default function ManagerPage() {
         status,
         total,
         created_at,
-        restaurant_tables ( table_number ),
+        bill_requested,
+        restaurant_tables ( table_number, status ),
         order_items (
           id,
           quantity,
           menu_items ( name, price )
         )
       `)
-      .eq('bill_requested', true)
       .neq('status', 'paid')
       .order('created_at', { ascending: true })
 
     if (error) {
-      console.error('Error loading bill requests:', error)
+      console.error('Error loading orders:', error)
     } else {
-      setBillRequests(data)
+      setOrders(data)
     }
-
     setLoading(false)
   }
 
   useEffect(() => {
-    fetchBillRequests()
-
-    const interval = setInterval(fetchBillRequests, 5000)
-
+    fetchOrders()
+    const interval = setInterval(fetchOrders, 4000)
     return () => clearInterval(interval)
   }, [])
 
-  // Group orders by table.
-  // A table can have multiple orders during one session.
-  function groupByTable(orders) {
+  async function logout() {
+    document.cookie = 'manager_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC'
+    window.location.href = '/manager/login'
+  }
+
+  function groupByTable(orderList) {
     const grouped = {}
-
-    orders.forEach((order) => {
+    orderList.forEach((order) => {
       const tableNum = order.restaurant_tables?.table_number
-
-      if (!grouped[tableNum]) {
-        grouped[tableNum] = []
-      }
-
+      if (!grouped[tableNum]) grouped[tableNum] = []
       grouped[tableNum].push(order)
     })
-
     return grouped
   }
 
-  // Calculate total of all orders belonging to one table.
-  function calculateTableTotal(orders) {
-    return orders.reduce(
-      (sum, order) => sum + Number(order.total || 0),
-      0
-    )
+  function tableTotal(tableOrders) {
+    return tableOrders.reduce((sum, o) => sum + Number(o.total || 0), 0)
   }
 
-  async function markAsPaid(orders) {
-    if (!orders || orders.length === 0) {
-      return
-    }
+  function tableHasBillRequest(tableOrders) {
+    return tableOrders.some((o) => o.bill_requested)
+  }
 
-    const orderIds = orders.map((order) => order.id)
+  async function markAsPaid(tableOrders) {
+    const orderIds = tableOrders.map((o) => o.id)
+    const tableNumber = tableOrders[0]?.restaurant_tables?.table_number
 
-    // --------------------------------------------------
-    // STEP 1:
-    // Mark all orders for this table as PAID
-    // --------------------------------------------------
-    const { error: orderError } = await supabase
+    const { error } = await supabase
       .from('orders')
-      .update({
-        status: 'paid',
-        bill_requested: false,
-      })
+      .update({ status: 'paid', bill_requested: false })
       .in('id', orderIds)
 
-    if (orderError) {
-      alert('Error marking orders as paid')
-      console.error(orderError)
+    if (error) {
+      alert('Error marking as paid')
+      console.error(error)
       return
     }
 
-    // --------------------------------------------------
-    // STEP 2:
-    // Find the restaurant table connected to these orders
-    // --------------------------------------------------
-    const { data: orderTableData, error: tableLookupError } =
+    if (tableNumber) {
       await supabase
-        .from('orders')
-        .select('table_id')
-        .eq('id', orderIds[0])
-        .single()
-
-    if (tableLookupError || !orderTableData) {
-      alert(
-        'Bill was paid, but the table session could not be closed.'
-      )
-
-      console.error(tableLookupError)
-
-      fetchBillRequests()
-      return
+        .from('restaurant_tables')
+        .update({ status: 'closed' })
+        .eq('table_number', tableNumber)
     }
 
-    // --------------------------------------------------
-    // STEP 3:
-    // Close the table session
-    //
-    // occupied = customer can order
-    // closed   = customer cannot place another order
-    // --------------------------------------------------
-    const { error: tableError } = await supabase
-      .from('restaurant_tables')
-      .update({
-        status: 'closed',
-      })
-      .eq('id', orderTableData.table_id)
-
-    if (tableError) {
-      alert(
-        'Bill was paid, but the table session could not be closed.'
-      )
-
-      console.error(tableError)
-      return
-    }
-
-    // --------------------------------------------------
-    // STEP 4:
-    // Refresh manager screen
-    // --------------------------------------------------
-    fetchBillRequests()
+    fetchOrders()
   }
 
   if (loading) {
     return (
-      <p style={{ padding: 20 }}>
-        Loading bill requests...
-      </p>
+      <div className="flex h-screen items-center justify-center bg-[#F3E9D8]">
+        <p className="font-[family-name:var(--font-body)] text-[#241A14]">Loading dashboard…</p>
+      </div>
     )
   }
 
-  const grouped = groupByTable(billRequests)
-  const tableNumbers = Object.keys(grouped)
+  const grouped = groupByTable(orders)
+  const tableNumbers = Object.keys(grouped).sort((a, b) => {
+    const aRequested = tableHasBillRequest(grouped[a])
+    const bRequested = tableHasBillRequest(grouped[b])
+    if (aRequested && !bRequested) return -1
+    if (!aRequested && bRequested) return 1
+    return Number(a) - Number(b)
+  })
+
+  const totalActiveTables = tableNumbers.length
+  const totalPendingItems = orders.filter((o) => o.status === 'pending').length
+  const totalBillRequests = tableNumbers.filter((t) => tableHasBillRequest(grouped[t])).length
 
   return (
-    <div
-      style={{
-        padding: 20,
-        fontFamily: 'Arial, sans-serif',
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-  <h1>Manager — Bill Requests</h1>
-  <button onClick={logout} style={{ padding: '8px 14px', fontSize: 13 }}>Logout</button>
-</div>
-      {tableNumbers.length === 0 && (
-        <p>No pending bill requests right now.</p>
-      )}
+    <div className="min-h-screen bg-[#F3E9D8] font-[family-name:var(--font-body)]">
+      {/* Header */}
+      <div className="bg-[#241A14] px-6 pb-6 pt-6">
+        <div className="flex items-center justify-between">
+          <h1 className="font-[family-name:var(--font-display)] text-2xl italic text-[#F3E9D8]">
+            Manager Dashboard
+          </h1>
+          <button
+            onClick={logout}
+            className="rounded-full border border-[#F3E9D8]/30 px-4 py-1.5 text-xs font-medium text-[#F3E9D8] transition hover:bg-[#F3E9D8]/10"
+          >
+            Logout
+          </button>
+        </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns:
-            'repeat(auto-fill, minmax(300px, 1fr))',
-          gap: 15,
-        }}
-      >
-        {tableNumbers.map((tableNum) => {
-          const orders = grouped[tableNum]
-          const total = calculateTableTotal(orders)
+        {/* Stats row */}
+        <div className="mt-5 grid grid-cols-3 gap-3">
+          <div className="rounded-xl bg-[#F3E9D8]/10 px-4 py-3">
+            <p className="text-2xl font-semibold text-[#F3E9D8]">{totalActiveTables}</p>
+            <p className="text-xs text-[#F3E9D8]/60">Active tables</p>
+          </div>
+          <div className="rounded-xl bg-[#F3E9D8]/10 px-4 py-3">
+            <p className="text-2xl font-semibold text-[#D9A441]">{totalPendingItems}</p>
+            <p className="text-xs text-[#F3E9D8]/60">New orders</p>
+          </div>
+          <div className="rounded-xl bg-[#F3E9D8]/10 px-4 py-3">
+            <p className="text-2xl font-semibold text-[#E58B78]">{totalBillRequests}</p>
+            <p className="text-xs text-[#F3E9D8]/60">Bill requests</p>
+          </div>
+        </div>
+      </div>
 
-          return (
-            <div
-              key={tableNum}
-              style={{
-                border: '2px solid #d9534f',
-                borderRadius: 8,
-                padding: 15,
-                background: '#fff5f5',
-              }}
-            >
-              <h2 style={{ margin: 0 }}>
-                Table {tableNum}
-              </h2>
+      {/* Table cards */}
+      <div className="p-5">
+        {tableNumbers.length === 0 ? (
+          <p className="mt-10 text-center text-sm text-[#241A14]/50">
+            No active tables right now.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {tableNumbers.map((tableNum) => {
+              const tableOrders = grouped[tableNum]
+              const requested = tableHasBillRequest(tableOrders)
+              const total = tableTotal(tableOrders)
 
-              <p
-                style={{
-                  color: '#d9534f',
-                  fontWeight: 'bold',
-                }}
-              >
-                💰 Bill Requested
-              </p>
-
-              {orders.map((order) => (
+              return (
                 <div
-                  key={order.id}
-                  style={{
-                    marginBottom: 10,
-                    paddingLeft: 10,
-                  }}
+                  key={tableNum}
+                  className={`rounded-2xl border bg-white p-4 shadow-sm ${
+                    requested ? 'border-[#A6341D]' : 'border-[#241A14]/10'
+                  }`}
                 >
-                  <p
-                    style={{
-                      margin: '5px 0',
-                      fontSize: 13,
-                      color: '#555',
-                    }}
-                  >
-                    Order #{order.id} — {order.status}
-                  </p>
+                  {/* Table header */}
+                  <div className="flex items-center justify-between">
+                    <h2 className="font-[family-name:var(--font-display)] text-xl italic text-[#241A14]">
+                      Table {tableNum}
+                    </h2>
+                    {requested && (
+                      <span className="rounded-full bg-[#A6341D] px-3 py-1 text-xs font-semibold text-white">
+                        Bill requested
+                      </span>
+                    )}
+                  </div>
 
-                  <ul
-                    style={{
-                      margin: 0,
-                      paddingLeft: 18,
-                    }}
-                  >
-                    {order.order_items.map((item) => (
-                      <li key={item.id}>
-                        {item.quantity}x{' '}
-                        {item.menu_items?.name} — Rs.{' '}
-                        {Number(
-                          item.menu_items?.price || 0
-                        ) * Number(item.quantity || 0)}
-                      </li>
-                    ))}
-                  </ul>
+                  {/* Orders for this table */}
+                  <div className="mt-3 space-y-3">
+                    {tableOrders.map((order) => {
+                      const style = STATUS_STYLES[order.status] || STATUS_STYLES.pending
+                      const orderTime = new Date(order.created_at).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+
+                      return (
+                        <div key={order.id} className="rounded-xl bg-[#F3E9D8]/60 p-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-[#241A14]/50">
+                              Order #{order.id} · {orderTime}
+                            </span>
+                            <span
+                              className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${style.bg} ${style.text}`}
+                            >
+                              <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
+                              {style.label}
+                            </span>
+                          </div>
+
+                          <ul className="mt-2 space-y-1">
+                            {order.order_items.map((item) => (
+                              <li
+                                key={item.id}
+                                className="flex justify-between text-sm text-[#241A14]"
+                              >
+                                <span>
+                                  {item.quantity}× {item.menu_items?.name}
+                                </span>
+                                <span className="text-[#241A14]/60">
+                                  Rs. {Number(item.menu_items?.price || 0) * Number(item.quantity || 0)}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Total + action */}
+                  <div className="mt-4 flex items-center justify-between border-t border-[#241A14]/10 pt-3">
+                    <span className="text-lg font-semibold text-[#A6341D]">Rs. {total}</span>
+                    <button
+                      onClick={() => markAsPaid(tableOrders)}
+                      className="rounded-full bg-[#241A14] px-4 py-2 text-xs font-semibold text-[#F3E9D8] transition active:scale-95"
+                    >
+                      Mark as Paid
+                    </button>
+                  </div>
                 </div>
-              ))}
-
-              <hr />
-
-              <p
-                style={{
-                  fontSize: 18,
-                  fontWeight: 'bold',
-                }}
-              >
-                Total: Rs. {total}
-              </p>
-
-              <button
-                onClick={() => markAsPaid(orders)}
-                style={{
-                  padding: '10px 20px',
-                  background: '#4CAF50',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: 5,
-                  width: '100%',
-                  cursor: 'pointer',
-                  fontSize: 16,
-                }}
-              >
-                Mark as Paid
-              </button>
-            </div>
-          )
-        })}
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )
