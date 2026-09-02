@@ -13,8 +13,8 @@ const supabase = createClient(
 const CURRENT_TABLE_NUMBER = 1
 
 export default function MenuPage() {
-  const [menuItems, setMenuItems] = useState[]>([])
-  const [cart, setCart] = useState([])
+  const [menuItems, setMenuItems] = useState<any[]>([])
+  const [cart, setCart] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [placingOrder, setPlacingOrder] = useState(false)
   const [orderConfirmed, setOrderConfirmed] = useState(false)
