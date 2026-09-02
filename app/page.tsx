@@ -1,14 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
-
-const CURRENT_TABLE_NUMBER = 1
 
 type MenuItem = {
   id: number
@@ -20,6 +19,23 @@ type MenuItem = {
 }
 
 export default function MenuPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center bg-[#F3E9D8]">
+          <p className="text-[#241A14]">Loading…</p>
+        </div>
+      }
+    >
+      <MenuPageInner />
+    </Suspense>
+  )
+}
+
+function MenuPageInner() {
+  const searchParams = useSearchParams()
+  const CURRENT_TABLE_NUMBER = Number(searchParams.get('table')) || null
+
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [cart, setCart] = useState<MenuItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -60,6 +76,20 @@ export default function MenuPage() {
   }, [])
 
   // --------------------------------------------------
+  // Reactivate this table for a fresh customer scanning the QR code
+  // --------------------------------------------------
+  useEffect(() => {
+    async function reactivateTable() {
+      if (!CURRENT_TABLE_NUMBER) return
+      await supabase
+        .from('restaurant_tables')
+        .update({ status: 'occupied' })
+        .eq('table_number', CURRENT_TABLE_NUMBER)
+    }
+    reactivateTable()
+  }, [CURRENT_TABLE_NUMBER])
+
+  // --------------------------------------------------
   // Check table session status
   //
   // occupied = customer can order
@@ -70,6 +100,8 @@ export default function MenuPage() {
   // --------------------------------------------------
   useEffect(() => {
     async function checkTableStatus() {
+      if (!CURRENT_TABLE_NUMBER) return
+
       const { data, error } = await supabase
         .from('restaurant_tables')
         .select('status')
@@ -101,7 +133,7 @@ export default function MenuPage() {
     const interval = setInterval(checkTableStatus, 2000)
 
     return () => clearInterval(interval)
-  }, [])
+  }, [CURRENT_TABLE_NUMBER])
 
   // --------------------------------------------------
   // Add item to cart
@@ -152,7 +184,7 @@ export default function MenuPage() {
   // Place order
   // --------------------------------------------------
   async function placeOrder() {
-    if (cart.length === 0) {
+    if (cart.length === 0 || !CURRENT_TABLE_NUMBER) {
       return
     }
 
@@ -221,13 +253,10 @@ export default function MenuPage() {
     // --------------------------------------------------
     // Group identical menu items
     // --------------------------------------------------
-    const grouped: Record<
-      number,
-      {
-        menu_item_id: number
-        quantity: number
-      }
-    > = {}
+        // --------------------------------------------------
+    // Group identical menu items
+    // --------------------------------------------------
+    const grouped: { [key: number]: { menu_item_id: number; quantity: number } } = {}
 
     cart.forEach((item) => {
       if (grouped[item.id]) {
@@ -294,6 +323,19 @@ export default function MenuPage() {
     }
 
     setRequestingBill(false)
+  }
+
+  // --------------------------------------------------
+  // No table number in the link
+  // --------------------------------------------------
+  if (!CURRENT_TABLE_NUMBER) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center bg-[#F3E9D8] px-6 text-center">
+        <p className="font-[family-name:var(--font-body)] text-sm text-[#241A14]">
+          Please scan the QR code on your table to view the menu.
+        </p>
+      </div>
+    )
   }
 
   // --------------------------------------------------
@@ -539,9 +581,6 @@ export default function MenuPage() {
                     Rs. {item.price}
                   </span>
 
-                  {/* ------------------------------ */}
-                  {/* ORDERING OPEN                   */}
-                  {/* ------------------------------ */}
                   {orderingAllowed ? (
                     qty === 0 ? (
                       <button
@@ -574,9 +613,6 @@ export default function MenuPage() {
                       </div>
                     )
                   ) : (
-                    /* ------------------------------ */
-                    /* ORDERING CLOSED                 */
-                    /* ------------------------------ */
                     <span className="rounded-full bg-[#241A14]/10 px-3 py-1.5 text-xs text-[#241A14]/40">
                       Closed
                     </span>
