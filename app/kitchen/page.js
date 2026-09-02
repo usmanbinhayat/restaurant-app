@@ -9,6 +9,10 @@ const supabase = createClient(
 )
 
 export default function KitchenPage() {
+    async function logout() {
+    document.cookie = 'kitchen_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC'
+    window.location.href = '/kitchen/login'
+  }
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -67,7 +71,10 @@ export default function KitchenPage() {
 
   return (
     <div style={{ padding: 20, fontFamily: 'Arial, sans-serif' }}>
-      <h1>Kitchen Orders</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+  <h1>Kitchen Orders</h1>
+  <button onClick={logout} style={{ padding: '8px 14px', fontSize: 13 }}>Logout</button>
+</div>
 
       {orders.length === 0 && <p>No active orders right now.</p>}
 

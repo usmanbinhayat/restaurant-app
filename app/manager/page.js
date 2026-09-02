@@ -9,6 +9,10 @@ const supabase = createClient(
 )
 
 export default function ManagerPage() {
+    async function logout() {
+    document.cookie = 'manager_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC'
+    window.location.href = '/manager/login'
+  }
   const [billRequests, setBillRequests] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -171,8 +175,10 @@ export default function ManagerPage() {
         fontFamily: 'Arial, sans-serif',
       }}
     >
-      <h1>Manager — Bill Requests</h1>
-
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+  <h1>Manager — Bill Requests</h1>
+  <button onClick={logout} style={{ padding: '8px 14px', fontSize: 13 }}>Logout</button>
+</div>
       {tableNumbers.length === 0 && (
         <p>No pending bill requests right now.</p>
       )}
