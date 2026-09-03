@@ -432,12 +432,20 @@ export default function AdminPage() {
 
       {activeTab === 'tables' && (
         <div className="p-6">
-          <button
-            onClick={addTable}
-            className="mb-5 rounded-full bg-[#241A14] px-5 py-2.5 text-sm font-semibold text-[#F3E9D8]"
-          >
-            + Add Table
-          </button>
+          <div className="mb-5 flex gap-3">
+            <button
+              onClick={addTable}
+              className="rounded-full bg-[#241A14] px-5 py-2.5 text-sm font-semibold text-[#F3E9D8]"
+            >
+              + Add Table
+            </button>
+            <button
+              onClick={() => window.open('/admin/qr-print?table=all', '_blank')}
+              className="rounded-full border border-[#241A14]/30 px-5 py-2.5 text-sm font-semibold text-[#241A14]"
+            >
+              Print All QR Codes
+            </button>
+          </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {tables.map((table) => (
@@ -449,12 +457,20 @@ export default function AdminPage() {
                   {table.table_number}
                 </p>
                 <p className="mt-1 text-xs text-[#241A14]/50">{table.status}</p>
-                <button
-                  onClick={() => deleteTable(table.id)}
-                  className="mt-2 text-xs text-[#A6341D]"
-                >
-                  Delete
-                </button>
+                <div className="mt-2 flex justify-center gap-3">
+                  <button
+                    onClick={() => window.open(`/admin/qr-print?table=${table.table_number}`, '_blank')}
+                    className="text-xs text-[#241A14] underline"
+                  >
+                    Print QR
+                  </button>
+                  <button
+                    onClick={() => deleteTable(table.id)}
+                    className="text-xs text-[#A6341D]"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             ))}
           </div>
