@@ -10,23 +10,25 @@ const supabase = createClient(
 
 const STATUS_STYLES = {
   pending: { label: 'New', bg: 'bg-[#E8A93A]/15', text: 'text-[#946A1C]', dot: 'bg-[#E8A93A]' },
-  received: { label: 'Received', bg: 'bg-[#5B7FA6]/15', text: 'text-[#3A5A7A]', dot: 'bg-[#5B7FA6]' },
   preparing: { label: 'Preparing', bg: 'bg-[#8B5FA8]/15', text: 'text-[#6B3F87]', dot: 'bg-[#8B5FA8]' },
   ready: { label: 'Ready', bg: 'bg-[#55684A]/15', text: 'text-[#3E4D36]', dot: 'bg-[#55684A]' },
+  served: { label: 'Served', bg: 'bg-[#241A14]/10', text: 'text-[#241A14]/50', dot: 'bg-[#241A14]/40' },
 }
 
 export default function ManagerPage() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
+  const [now, setNow] = useState(new Date())
 
   async function fetchOrders() {
     const { data, error } = await supabase
       .from('orders')
       .select(`
-        id,
+                id,
         status,
         total,
         created_at,
+        served_at,
         bill_requested,
         restaurant_tables ( table_number, status ),
         order_items (
@@ -52,6 +54,12 @@ export default function ManagerPage() {
     return () => clearInterval(interval)
   }, [])
 
+  // Ticks every 15 seconds so "time ago" labels stay fresh
+  useEffect(() => {
+    const clock = setInterval(() => setNow(new Date()), 15000)
+    return () => clearInterval(clock)
+  }, [])
+
   async function logout() {
     document.cookie = 'manager_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC'
     window.location.href = '/manager/login'
@@ -73,6 +81,24 @@ export default function ManagerPage() {
 
   function tableHasBillRequest(tableOrders) {
     return tableOrders.some((o) => o.bill_requested)
+  }
+
+    function minutesAgo(createdAt, servedAt) {
+    const endTime = servedAt ? new Date(servedAt) : now
+    return Math.max(0, Math.floor((endTime.getTime() - new Date(createdAt).getTime()) / 60000))
+  }
+
+  function waitTimeColor(mins, isReady) {
+    if (isReady) return 'text-[#241A14]/40'
+    if (mins >= 20) return 'text-[#A6341D] font-semibold'
+    if (mins >= 10) return 'text-[#946A1C] font-semibold'
+    return 'text-[#241A14]/50'
+  }
+
+    function longestWait(tableOrders) {
+    const activeOrders = tableOrders.filter((o) => !['ready', 'served'].includes(o.status))
+    const source = activeOrders.length > 0 ? activeOrders : tableOrders
+    return Math.max(...source.map((o) => minutesAgo(o.created_at, o.served_at)))
   }
 
   async function markAsPaid(tableOrders) {
@@ -98,6 +124,10 @@ export default function ManagerPage() {
     }
 
     fetchOrders()
+  }
+
+  function printBill(tableNum) {
+    window.open(`/manager/print?table=${tableNum}`, '_blank')
   }
 
   if (loading) {
@@ -137,7 +167,6 @@ export default function ManagerPage() {
           </button>
         </div>
 
-        {/* Stats row */}
         <div className="mt-5 grid grid-cols-3 gap-3">
           <div className="rounded-xl bg-[#F3E9D8]/10 px-4 py-3">
             <p className="text-2xl font-semibold text-[#F3E9D8]">{totalActiveTables}</p>
@@ -166,6 +195,7 @@ export default function ManagerPage() {
               const tableOrders = grouped[tableNum]
               const requested = tableHasBillRequest(tableOrders)
               const total = tableTotal(tableOrders)
+              const waitMins = longestWait(tableOrders)
 
               return (
                 <div
@@ -179,11 +209,22 @@ export default function ManagerPage() {
                     <h2 className="font-[family-name:var(--font-display)] text-xl italic text-[#241A14]">
                       Table {tableNum}
                     </h2>
-                    {requested && (
-                      <span className="rounded-full bg-[#A6341D] px-3 py-1 text-xs font-semibold text-white">
-                        Bill requested
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {waitMins >= 10 && (
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            waitMins >= 20 ? 'bg-[#A6341D]/10 text-[#A6341D]' : 'bg-[#E8A93A]/15 text-[#946A1C]'
+                          }`}
+                        >
+                          {waitMins}m waiting
+                        </span>
+                      )}
+                      {requested && (
+                        <span className="rounded-full bg-[#A6341D] px-3 py-1 text-xs font-semibold text-white">
+                          Bill requested
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Orders for this table */}
@@ -194,6 +235,8 @@ export default function ManagerPage() {
                         hour: '2-digit',
                         minute: '2-digit',
                       })
+                      const isServed = order.status === 'served'
+                      const mins = minutesAgo(order.created_at, order.served_at)
 
                       return (
                         <div key={order.id} className="rounded-xl bg-[#F3E9D8]/60 p-3">
@@ -208,6 +251,10 @@ export default function ManagerPage() {
                               {style.label}
                             </span>
                           </div>
+
+                          <p className={`mt-1 text-xs ${waitTimeColor(mins, isServed)}`}>
+                            {isServed ? `Served in ${mins} min` : `Waiting ${mins} min`}
+                          </p>
 
                           <ul className="mt-2 space-y-1">
                             {order.order_items.map((item) => (
@@ -229,15 +276,23 @@ export default function ManagerPage() {
                     })}
                   </div>
 
-                  {/* Total + action */}
+                  {/* Total + actions */}
                   <div className="mt-4 flex items-center justify-between border-t border-[#241A14]/10 pt-3">
                     <span className="text-lg font-semibold text-[#A6341D]">Rs. {total}</span>
-                    <button
-                      onClick={() => markAsPaid(tableOrders)}
-                      className="rounded-full bg-[#241A14] px-4 py-2 text-xs font-semibold text-[#F3E9D8] transition active:scale-95"
-                    >
-                      Mark as Paid
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => printBill(tableNum)}
+                        className="rounded-full border border-[#241A14]/20 px-3 py-2 text-xs font-medium text-[#241A14] transition active:scale-95"
+                      >
+                        Print Bill
+                      </button>
+                      <button
+                        onClick={() => markAsPaid(tableOrders)}
+                        className="rounded-full bg-[#241A14] px-4 py-2 text-xs font-semibold text-[#F3E9D8] transition active:scale-95"
+                      >
+                        Mark as Paid
+                      </button>
+                    </div>
                   </div>
                 </div>
               )

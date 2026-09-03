@@ -17,9 +17,16 @@ export function middleware(request) {
     }
   }
 
+  if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
+    const auth = request.cookies.get('admin_auth')
+    if (auth?.value !== 'true') {
+      return NextResponse.redirect(new URL('/admin/login', request.url))
+    }
+  }
+
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: ['/kitchen', '/kitchen/:path*', '/manager', '/manager/:path*'],
+  matcher: ['/kitchen', '/kitchen/:path*', '/manager', '/manager/:path*', '/admin', '/admin/:path*'],
 }

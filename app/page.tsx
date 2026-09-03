@@ -54,10 +54,11 @@ function MenuPageInner() {
   // --------------------------------------------------
   useEffect(() => {
     async function fetchMenu() {
-      const { data, error } = await supabase
+            const { data, error } = await supabase
         .from('menu_items')
         .select('*')
         .eq('available', true)
+        .order('sort_order', { ascending: true })
 
       if (error) {
         console.error('Error loading menu:', error)
@@ -78,16 +79,7 @@ function MenuPageInner() {
   // --------------------------------------------------
   // Reactivate this table for a fresh customer scanning the QR code
   // --------------------------------------------------
-  useEffect(() => {
-    async function reactivateTable() {
-      if (!CURRENT_TABLE_NUMBER) return
-      await supabase
-        .from('restaurant_tables')
-        .update({ status: 'occupied' })
-        .eq('table_number', CURRENT_TABLE_NUMBER)
-    }
-    reactivateTable()
-  }, [CURRENT_TABLE_NUMBER])
+  
 
   // --------------------------------------------------
   // Check table session status
