@@ -438,49 +438,43 @@ function MenuPageInner() {
           Sit back and relax — we&apos;ll bring it out shortly.
         </p>
 
-        <div className="mt-8 flex w-full max-w-xs flex-col gap-3">
-          {/* Order more button */}
-          <button
-            onClick={() => {
-              if (!orderingAllowed) {
-                alert(
-                  'This table session has ended. Please scan the QR code again to place a new order.'
-                )
-                return
-              }
-
-              setOrderConfirmed(false)
-            }}
-            disabled={!orderingAllowed}
-            className="rounded-full border border-white/25 py-3 font-[family-name:var(--font-body)] text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {orderingAllowed ? 'Order more' : 'Session ended'}
-          </button>
-
-          {!billRequested ? (
+        {orderingAllowed ? (
+          <div className="mt-8 flex w-full max-w-xs flex-col gap-3">
             <button
-              onClick={requestBill}
-              disabled={requestingBill}
-              className="rounded-full bg-[#ea811b] py-3 font-[family-name:var(--font-body)] text-sm font-semibold text-white transition hover:bg-[#d9700f] disabled:opacity-60"
+              onClick={() => setOrderConfirmed(false)}
+              className="rounded-full border border-white/25 py-3 font-[family-name:var(--font-body)] text-sm font-medium text-white transition hover:bg-white/10"
             >
-              {requestingBill
-                ? 'Requesting…'
-                : 'Request the bill'}
+              Order more
             </button>
-          ) : (
-            <p className="rounded-full bg-[#ea811b]/15 py-3 font-[family-name:var(--font-body)] text-sm text-[#ffc184]">
-              Bill requested — staff is on the way
-            </p>
-          )}
-        </div>
 
-        {/* Session ended message */}
-        {!orderingAllowed && (
-          <p className="mt-6 max-w-xs text-xs leading-relaxed text-white/55">
-            This table has been paid and the session has ended.
-            Please scan the restaurant QR code again to start a
-            new session.
-          </p>
+            {!billRequested ? (
+              <button
+                onClick={requestBill}
+                disabled={requestingBill}
+                className="rounded-full bg-[#ea811b] py-3 font-[family-name:var(--font-body)] text-sm font-semibold text-white transition hover:bg-[#d9700f] disabled:opacity-60"
+              >
+                {requestingBill ? 'Requesting…' : 'Request the bill'}
+              </button>
+            ) : (
+              <p className="rounded-full bg-[#ea811b]/15 py-3 font-[family-name:var(--font-body)] text-sm text-[#ffc184]">
+                Bill requested — staff is on the way
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="mt-8 w-full max-w-xs">
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-6 py-6">
+              <p className="font-[family-name:var(--font-display)] text-lg italic text-[#ea811b]">
+                Thank you for visiting!
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-white/60">
+                We hope you enjoyed your meal. Come back and see us again soon.
+              </p>
+            </div>
+            <p className="mt-4 text-xs text-white/40">
+              Scan the QR code on your table next time to start a new order.
+            </p>
+          </div>
         )}
 
         <style>{`
