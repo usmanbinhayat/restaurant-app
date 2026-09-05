@@ -1,26 +1,169 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f1f2f0;
+  --foreground: #121111;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-body);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body), sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #ea811b transparent;
+}
+
+.welcome-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #121111;
+  color: #ffffff;
+  transition: opacity 650ms ease, visibility 650ms ease;
+}
+
+.welcome-splash-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.welcome-splash-hidden {
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.welcome-splash-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: welcome-rise 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.welcome-mark {
+  display: grid;
+  width: 76px;
+  height: 76px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 0.3);
+  border-radius: 24px;
+  background: #ea811b;
+  box-shadow: 0 18px 50px rgb(234 129 27 / 0.3);
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.08em;
+}
+
+.welcome-kicker {
+  margin-top: 28px;
+  color: #ea811b;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.welcome-splash h1 {
+  margin-top: 10px;
+  font-family: var(--font-display), serif;
+  font-size: clamp(2.7rem, 11vw, 5.5rem);
+  font-style: italic;
+  line-height: 0.95;
+}
+
+.welcome-tagline {
+  margin-top: 18px;
+  color: rgb(255 255 255 / 0.65);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+}
+
+.welcome-line {
+  width: 56px;
+  height: 3px;
+  margin-top: 32px;
+  border-radius: 999px;
+  background: #ea811b;
+  animation: welcome-line 1100ms 250ms ease-out both;
+}
+
+.welcome-splash-glow {
+  position: absolute;
+  width: 52vw;
+  max-width: 520px;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  filter: blur(4px);
+  opacity: 0.32;
+}
+
+.welcome-splash-glow-one {
+  top: -24%;
+  right: -16%;
+  background: radial-gradient(circle, #ea811b 0%, transparent 68%);
+  animation: welcome-orbit 8s ease-in-out infinite alternate;
+}
+
+.welcome-splash-glow-two {
+  bottom: -32%;
+  left: -20%;
+  background: radial-gradient(circle, #7b3510 0%, transparent 68%);
+  animation: welcome-orbit 10s 500ms ease-in-out infinite alternate-reverse;
+}
+
+@keyframes welcome-rise {
+  from {
+    transform: translateY(18px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes welcome-line {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@keyframes welcome-orbit {
+  from {
+    transform: translate3d(-12px, 8px, 0) scale(0.94);
+  }
+  to {
+    transform: translate3d(12px, -8px, 0) scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-splash,
+  .welcome-splash-content,
+  .welcome-line,
+  .welcome-splash-glow {
+    animation: none;
+    transition: none;
+  }
 }

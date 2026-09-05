@@ -9,9 +9,9 @@ const supabase = createClient(
 )
 
 const STATUS_STYLES = {
-  pending: { label: 'New', bg: 'bg-[#E8A93A]/15', border: 'border-[#E8A93A]/40', text: 'text-[#946A1C]', dot: 'bg-[#E8A93A]' },
-  preparing: { label: 'Preparing', bg: 'bg-[#8B5FA8]/15', border: 'border-[#8B5FA8]/40', text: 'text-[#6B3F87]', dot: 'bg-[#8B5FA8]' },
-  ready: { label: 'Ready', bg: 'bg-[#55684A]/15', border: 'border-[#55684A]/40', text: 'text-[#3E4D36]', dot: 'bg-[#55684A]' },
+  pending: { label: 'New', bg: 'bg-[#ea811b]/10', border: 'border-[#ea811b]/30', text: 'text-[#b35e0f]', dot: 'bg-[#ea811b]' },
+  preparing: { label: 'Preparing', bg: 'bg-[#8B5FA8]/10', border: 'border-[#8B5FA8]/30', text: 'text-[#6B3F87]', dot: 'bg-[#8B5FA8]' },
+  ready: { label: 'Ready', bg: 'bg-[#55684A]/10', border: 'border-[#55684A]/30', text: 'text-[#3E4D36]', dot: 'bg-[#55684A]' },
 }
 
 export default function KitchenPage() {
@@ -62,7 +62,7 @@ export default function KitchenPage() {
     window.location.href = '/kitchen/login'
   }
 
-    async function updateStatus(orderId, newStatus) {
+  async function updateStatus(orderId, newStatus) {
     const updateData =
       newStatus === 'served'
         ? { status: newStatus, served_at: new Date().toISOString() }
@@ -86,37 +86,38 @@ export default function KitchenPage() {
   }
 
   function waitColor(mins) {
-    if (mins >= 20) return 'text-[#A6341D] font-semibold'
-    if (mins >= 10) return 'text-[#946A1C] font-semibold'
-    return 'text-[#241A14]/50'
+    if (mins >= 20) return 'text-red-600 font-semibold'
+    if (mins >= 10) return 'text-[#b35e0f] font-semibold'
+    return 'text-[#121111]/45'
   }
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#F3E9D8]">
-        <p className="font-[family-name:var(--font-body)] text-[#241A14]">Loading orders…</p>
+      <div className="flex h-screen items-center justify-center bg-[#f1f2f0]">
+        <p className="font-[family-name:var(--font-body)] text-[#121111]">Loading orders…</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#F3E9D8] font-[family-name:var(--font-body)]">
+    <div className="min-h-screen bg-[#f1f2f0] font-[family-name:var(--font-body)] text-[#121111]">
       {/* Header */}
-      <div className="flex items-center justify-between bg-[#241A14] px-6 py-5">
-        <h1 className="font-[family-name:var(--font-display)] text-2xl italic text-[#F3E9D8]">
-          Kitchen
-        </h1>
+      <div className="flex items-center justify-between bg-[#121111] px-6 py-5 text-white">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#ea811b]">Katlang Zaika</p>
+          <h1 className="mt-1 font-[family-name:var(--font-display)] text-2xl italic">Kitchen</h1>
+        </div>
         <button
           onClick={logout}
-          className="rounded-full border border-[#F3E9D8]/30 px-4 py-1.5 text-xs font-medium text-[#F3E9D8] transition hover:bg-[#F3E9D8]/10"
+          className="rounded-full border border-white/25 px-4 py-1.5 text-xs font-medium text-white transition hover:bg-white/10"
         >
           Logout
         </button>
       </div>
 
-      <div className="p-5">
+      <div className="mx-auto max-w-5xl p-5">
         {orders.length === 0 ? (
-          <p className="mt-10 text-center text-sm text-[#241A14]/50">
+          <p className="mt-10 text-center text-sm text-[#121111]/45">
             No active orders right now.
           </p>
         ) : (
@@ -132,11 +133,10 @@ export default function KitchenPage() {
               return (
                 <div
                   key={order.id}
-                  className={`rounded-2xl border-2 bg-white p-4 shadow-sm ${style.border}`}
+                  className={`rounded-2xl border bg-white p-4 shadow-[0_4px_18px_rgba(18,17,17,0.05)] ${style.border}`}
                 >
-                  {/* Header */}
                   <div className="flex items-center justify-between">
-                    <h2 className="font-[family-name:var(--font-display)] text-xl italic text-[#241A14]">
+                    <h2 className="font-[family-name:var(--font-display)] text-xl italic">
                       Table {order.restaurant_tables?.table_number}
                     </h2>
                     <span
@@ -148,28 +148,26 @@ export default function KitchenPage() {
                   </div>
 
                   <div className="mt-1 flex items-center justify-between text-xs">
-                    <span className="text-[#241A14]/50">Ordered at {orderTime}</span>
+                    <span className="text-[#121111]/45">Ordered at {orderTime}</span>
                     <span className={waitColor(mins)}>{mins} min ago</span>
                   </div>
 
-                  {/* Items */}
-                  <ul className="mt-3 space-y-1 border-t border-[#241A14]/10 pt-3">
+                  <ul className="mt-3 space-y-1 border-t border-[#121111]/10 pt-3">
                     {order.order_items.map((item) => (
-                      <li key={item.id} className="text-sm text-[#241A14]">
-                        <span className="font-medium">{item.quantity}×</span> {item.menu_items?.name}
+                      <li key={item.id} className="text-sm">
+                        <span className="font-semibold">{item.quantity}×</span> {item.menu_items?.name}
                         {item.notes && (
-                          <span className="text-[#241A14]/50"> ({item.notes})</span>
+                          <span className="text-[#121111]/45"> ({item.notes})</span>
                         )}
                       </li>
                     ))}
                   </ul>
 
-                  {/* Action button */}
                   <div className="mt-4">
                     {order.status === 'pending' && (
                       <button
                         onClick={() => updateStatus(order.id, 'preparing')}
-                        className="w-full rounded-full bg-[#241A14] py-2.5 text-sm font-semibold text-[#F3E9D8] transition active:scale-95"
+                        className="w-full rounded-full bg-[#121111] py-2.5 text-sm font-semibold text-white transition active:scale-95"
                       >
                         Start Preparing
                       </button>
@@ -177,7 +175,7 @@ export default function KitchenPage() {
                     {order.status === 'preparing' && (
                       <button
                         onClick={() => updateStatus(order.id, 'ready')}
-                        className="w-full rounded-full bg-[#D9A441] py-2.5 text-sm font-semibold text-[#241A14] transition active:scale-95"
+                        className="w-full rounded-full bg-[#ea811b] py-2.5 text-sm font-bold text-white transition active:scale-95"
                       >
                         Mark Ready
                       </button>
@@ -185,7 +183,7 @@ export default function KitchenPage() {
                     {order.status === 'ready' && (
                       <button
                         onClick={() => updateStatus(order.id, 'served')}
-                        className="w-full rounded-full bg-[#55684A] py-2.5 text-sm font-semibold text-[#F3E9D8] transition active:scale-95"
+                        className="w-full rounded-full bg-[#55684A] py-2.5 text-sm font-semibold text-white transition active:scale-95"
                       >
                         Mark Served
                       </button>

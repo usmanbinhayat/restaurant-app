@@ -19,7 +19,7 @@ const EMPTY_ITEM = {
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('menu')
-    const [settings, setSettings] = useState({ kitchen_password: '', manager_password: '', admin_password: '' })
+  const [settings, setSettings] = useState({ kitchen_password: '', manager_password: '', admin_password: '' })
   const [settingsId, setSettingsId] = useState(null)
   const [savingSettings, setSavingSettings] = useState(false)
   const [items, setItems] = useState([])
@@ -32,6 +32,7 @@ export default function AdminPage() {
   const [editingId, setEditingId] = useState(null)
   const [editItem, setEditItem] = useState(EMPTY_ITEM)
   const [uploadingEditId, setUploadingEditId] = useState(null)
+
   async function fetchSettings() {
     const { data } = await supabase.from('app_settings').select('*').single()
     if (data) {
@@ -62,8 +63,9 @@ export default function AdminPage() {
     }
     setSavingSettings(false)
   }
+
   async function fetchAll() {
-        const { data: itemData } = await supabase
+    const { data: itemData } = await supabase
       .from('menu_items')
       .select('*')
       .order('category', { ascending: true })
@@ -88,7 +90,6 @@ export default function AdminPage() {
     window.location.href = '/admin/login'
   }
 
-  // ---------- Image upload helper ----------
   async function uploadImage(file) {
     const fileExt = file.name.split('.').pop()
     const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
@@ -103,7 +104,6 @@ export default function AdminPage() {
     return data.publicUrl
   }
 
-  // ---------- Add new item ----------
   async function handleNewImageUpload(e) {
     const file = e.target.files[0]
     if (!file) return
@@ -137,7 +137,6 @@ export default function AdminPage() {
     fetchAll()
   }
 
-  // ---------- Edit existing item ----------
   function startEdit(item) {
     setEditingId(item.id)
     setEditItem({
@@ -195,7 +194,7 @@ export default function AdminPage() {
     }
     fetchAll()
   }
-  
+
   async function toggleAvailable(item) {
     await supabase
       .from('menu_items')
@@ -204,7 +203,7 @@ export default function AdminPage() {
     fetchAll()
   }
 
-    async function moveItem(item, direction) {
+  async function moveItem(item, direction) {
     const categoryItems = items
       .filter((i) => i.category === item.category)
       .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
@@ -224,7 +223,6 @@ export default function AdminPage() {
     fetchAll()
   }
 
-  // ---------- Tables ----------
   async function addTable() {
     const nextNumber =
       tables.length > 0 ? Math.max(...tables.map((t) => t.table_number)) + 1 : 1
@@ -252,8 +250,8 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#F3E9D8]">
-        <p className="font-[family-name:var(--font-body)] text-[#241A14]">Loading admin panel…</p>
+      <div className="flex h-screen items-center justify-center bg-[#f1f2f0]">
+        <p className="font-[family-name:var(--font-body)] text-[#121111]">Loading admin panel…</p>
       </div>
     )
   }
@@ -261,47 +259,41 @@ export default function AdminPage() {
   const categories = [...new Set(items.map((i) => i.category))]
 
   return (
-    <div className="min-h-screen bg-[#F3E9D8] pb-20 font-[family-name:var(--font-body)]">
+    <div className="min-h-screen bg-[#f1f2f0] pb-20 font-[family-name:var(--font-body)] text-[#121111]">
       {/* Header */}
-      <div className="flex items-center justify-between bg-[#241A14] px-6 py-5">
-        <h1 className="font-[family-name:var(--font-display)] text-2xl italic text-[#F3E9D8]">
-          Admin Panel
-        </h1>
+      <div className="flex items-center justify-between bg-[#121111] px-6 py-5 text-white">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#ea811b]">Katlang Zaika</p>
+          <h1 className="mt-1 font-[family-name:var(--font-display)] text-2xl italic">Admin Panel</h1>
+        </div>
         <button
           onClick={logout}
-          className="rounded-full border border-[#F3E9D8]/30 px-4 py-1.5 text-xs font-medium text-[#F3E9D8] transition hover:bg-[#F3E9D8]/10"
+          className="rounded-full border border-white/25 px-4 py-1.5 text-xs font-medium text-white transition hover:bg-white/10"
         >
           Logout
         </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-6 border-b border-[#241A14]/10 bg-[#F3E9D8] px-6 py-3">
-        <button
-          onClick={() => setActiveTab('menu')}
-          className={`text-sm font-medium ${activeTab === 'menu' ? 'border-b-2 border-[#A6341D] pb-1 text-[#241A14]' : 'text-[#241A14]/50'}`}
-        >
-          Menu Items
-        </button>
-        <button
-          onClick={() => setActiveTab('tables')}
-          className={`text-sm font-medium ${activeTab === 'tables' ? 'border-b-2 border-[#A6341D] pb-1 text-[#241A14]' : 'text-[#241A14]/50'}`}
-        >
-          Tables
-        </button>
-        <button
-          onClick={() => setActiveTab('settings')}
-          className={`text-sm font-medium ${activeTab === 'settings' ? 'border-b-2 border-[#A6341D] pb-1 text-[#241A14]' : 'text-[#241A14]/50'}`}
-        >
-          Settings
-        </button>
+      <div className="flex gap-2 bg-[#f1f2f0] px-6 py-3">
+        {['menu', 'tables', 'settings'].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`rounded-full px-4 py-2 text-xs font-semibold capitalize transition ${
+              activeTab === tab ? 'bg-[#ea811b] text-white shadow-sm' : 'bg-white text-[#121111]/55'
+            }`}
+          >
+            {tab === 'menu' ? 'Menu Items' : tab}
+          </button>
+        ))}
       </div>
 
       {activeTab === 'menu' && (
-        <div className="p-6">
+        <div className="mx-auto max-w-4xl p-6">
           {/* Add new item form */}
-          <div className="mb-8 rounded-2xl border border-[#241A14]/10 bg-white p-5">
-            <h2 className="mb-3 font-[family-name:var(--font-display)] text-lg italic text-[#241A14]">
+          <div className="mb-8 rounded-2xl bg-white p-5 shadow-[0_4px_18px_rgba(18,17,17,0.05)]">
+            <h2 className="mb-3 font-[family-name:var(--font-display)] text-lg italic">
               Add New Item
             </h2>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -309,31 +301,31 @@ export default function AdminPage() {
                 placeholder="Name"
                 value={newItem.name}
                 onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-                className="rounded-lg border border-[#241A14]/20 px-3 py-2 text-sm"
+                className="rounded-lg border border-[#121111]/15 px-3 py-2 text-sm"
               />
               <input
                 placeholder="Category (e.g. Karahi)"
                 value={newItem.category}
                 onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
-                className="rounded-lg border border-[#241A14]/20 px-3 py-2 text-sm"
+                className="rounded-lg border border-[#121111]/15 px-3 py-2 text-sm"
               />
               <input
                 placeholder="Price"
                 type="number"
                 value={newItem.price}
                 onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
-                className="rounded-lg border border-[#241A14]/20 px-3 py-2 text-sm"
+                className="rounded-lg border border-[#121111]/15 px-3 py-2 text-sm"
               />
               <input
                 placeholder="Description"
                 value={newItem.description}
                 onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
-                className="rounded-lg border border-[#241A14]/20 px-3 py-2 text-sm"
+                className="rounded-lg border border-[#121111]/15 px-3 py-2 text-sm"
               />
             </div>
 
             <div className="mt-3 flex items-center gap-3">
-              <label className="cursor-pointer rounded-lg border border-dashed border-[#241A14]/30 px-3 py-2 text-xs text-[#241A14]/60">
+              <label className="cursor-pointer rounded-lg border border-dashed border-[#121111]/25 px-3 py-2 text-xs text-[#121111]/55">
                 {uploadingNew ? 'Uploading…' : newItem.image_url ? 'Change photo' : 'Upload photo'}
                 <input type="file" accept="image/*" onChange={handleNewImageUpload} className="hidden" />
               </label>
@@ -344,7 +336,7 @@ export default function AdminPage() {
 
             <button
               onClick={addItem}
-              className="mt-4 rounded-full bg-[#241A14] px-5 py-2.5 text-sm font-semibold text-[#F3E9D8] transition active:scale-95"
+              className="mt-4 rounded-full bg-[#ea811b] px-5 py-2.5 text-sm font-bold text-white transition active:scale-95"
             >
               Add Item
             </button>
@@ -353,42 +345,42 @@ export default function AdminPage() {
           {/* Existing items, grouped by category */}
           {categories.map((category) => (
             <div key={category} className="mb-8">
-              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[#241A14]/50">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[#121111]/45">
                 {category}
               </h3>
               <div className="space-y-3">
                 {items
                   .filter((item) => item.category === category)
                   .map((item) => (
-                    <div key={item.id} className="rounded-2xl border border-[#241A14]/10 bg-white p-4">
+                    <div key={item.id} className="rounded-2xl bg-white p-4 shadow-[0_4px_18px_rgba(18,17,17,0.05)]">
                       {editingId === item.id ? (
                         <div className="space-y-3">
                           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <input
                               value={editItem.name}
                               onChange={(e) => setEditItem({ ...editItem, name: e.target.value })}
-                              className="rounded-lg border border-[#241A14]/20 px-3 py-2 text-sm"
+                              className="rounded-lg border border-[#121111]/15 px-3 py-2 text-sm"
                             />
                             <input
                               value={editItem.category}
                               onChange={(e) => setEditItem({ ...editItem, category: e.target.value })}
-                              className="rounded-lg border border-[#241A14]/20 px-3 py-2 text-sm"
+                              className="rounded-lg border border-[#121111]/15 px-3 py-2 text-sm"
                             />
                             <input
                               type="number"
                               value={editItem.price}
                               onChange={(e) => setEditItem({ ...editItem, price: e.target.value })}
-                              className="rounded-lg border border-[#241A14]/20 px-3 py-2 text-sm"
+                              className="rounded-lg border border-[#121111]/15 px-3 py-2 text-sm"
                             />
                             <input
                               value={editItem.description}
                               onChange={(e) => setEditItem({ ...editItem, description: e.target.value })}
-                              className="rounded-lg border border-[#241A14]/20 px-3 py-2 text-sm"
+                              className="rounded-lg border border-[#121111]/15 px-3 py-2 text-sm"
                             />
                           </div>
 
                           <div className="flex items-center gap-3">
-                            <label className="cursor-pointer rounded-lg border border-dashed border-[#241A14]/30 px-3 py-2 text-xs text-[#241A14]/60">
+                            <label className="cursor-pointer rounded-lg border border-dashed border-[#121111]/25 px-3 py-2 text-xs text-[#121111]/55">
                               {uploadingEditId === editingId ? 'Uploading…' : 'Change photo'}
                               <input type="file" accept="image/*" onChange={handleEditImageUpload} className="hidden" />
                             </label>
@@ -400,70 +392,72 @@ export default function AdminPage() {
                           <div className="flex gap-2">
                             <button
                               onClick={() => saveEdit(item.id)}
-                              className="rounded-full bg-[#241A14] px-4 py-2 text-xs font-semibold text-[#F3E9D8]"
+                              className="rounded-full bg-[#121111] px-4 py-2 text-xs font-semibold text-white"
                             >
                               Save
                             </button>
                             <button
                               onClick={cancelEdit}
-                              className="rounded-full border border-[#241A14]/20 px-4 py-2 text-xs text-[#241A14]"
+                              className="rounded-full border border-[#121111]/15 px-4 py-2 text-xs"
                             >
                               Cancel
                             </button>
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-4">
-                          <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-[#241A14]/5">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-[#121111]/5">
                             {item.image_url ? (
                               <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
                             ) : (
-                              <div className="flex h-full w-full items-center justify-center text-[10px] text-[#241A14]/30">
+                              <div className="flex h-full w-full items-center justify-center text-[10px] text-[#121111]/30">
                                 No photo
                               </div>
                             )}
                           </div>
 
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-[#241A14]">{item.name}</p>
-                            <p className="text-xs text-[#241A14]/50">{item.description}</p>
-                            <p className="text-sm font-semibold text-[#A6341D]">Rs. {item.price}</p>
+                          <div className="min-w-[140px] flex-1">
+                            <p className="text-sm font-semibold">{item.name}</p>
+                            <p className="text-xs text-[#121111]/45">{item.description}</p>
+                            <p className="text-sm font-bold text-[#ea811b]">Rs. {item.price}</p>
                           </div>
 
                           <button
                             onClick={() => toggleAvailable(item)}
                             className={`rounded-full px-3 py-1.5 text-xs font-medium ${
                               item.available
-                                ? 'bg-[#55684A]/15 text-[#3E4D36]'
-                                : 'bg-[#241A14]/10 text-[#241A14]/50'
+                                ? 'bg-[#55684A]/10 text-[#3E4D36]'
+                                : 'bg-[#121111]/8 text-[#121111]/45'
                             }`}
                           >
                             {item.available ? 'Available' : 'Hidden'}
                           </button>
+
                           <div className="flex flex-col gap-1">
                             <button
                               onClick={() => moveItem(item, 'up')}
-                              className="rounded border border-[#241A14]/20 px-2 text-xs text-[#241A14]"
+                              className="rounded border border-[#121111]/15 px-2 text-xs"
                             >
                               ↑
                             </button>
                             <button
                               onClick={() => moveItem(item, 'down')}
-                              className="rounded border border-[#241A14]/20 px-2 text-xs text-[#241A14]"
+                              className="rounded border border-[#121111]/15 px-2 text-xs"
                             >
                               ↓
                             </button>
                           </div>
+
                           <button
                             onClick={() => startEdit(item)}
-                            className="rounded-full border border-[#241A14]/20 px-3 py-1.5 text-xs text-[#241A14]"
+                            className="rounded-full border border-[#121111]/15 px-3 py-1.5 text-xs"
                           >
                             Edit
                           </button>
 
                           <button
                             onClick={() => deleteItem(item.id)}
-                            className="rounded-full border border-[#A6341D]/30 px-3 py-1.5 text-xs text-[#A6341D]"
+                            className="rounded-full border border-red-300 px-3 py-1.5 text-xs text-red-600"
                           >
                             Delete
                           </button>
@@ -477,18 +471,18 @@ export default function AdminPage() {
         </div>
       )}
 
-            {activeTab === 'tables' && (
-        <div className="p-6">
+      {activeTab === 'tables' && (
+        <div className="mx-auto max-w-4xl p-6">
           <div className="mb-5 flex gap-3">
             <button
               onClick={addTable}
-              className="rounded-full bg-[#241A14] px-5 py-2.5 text-sm font-semibold text-[#F3E9D8]"
+              className="rounded-full bg-[#ea811b] px-5 py-2.5 text-sm font-bold text-white"
             >
               + Add Table
             </button>
             <button
               onClick={() => window.open('/admin/qr-print?table=all', '_blank')}
-              className="rounded-full border border-[#241A14]/30 px-5 py-2.5 text-sm font-semibold text-[#241A14]"
+              className="rounded-full border border-[#121111]/20 px-5 py-2.5 text-sm font-semibold"
             >
               Print All QR Codes
             </button>
@@ -498,22 +492,22 @@ export default function AdminPage() {
             {tables.map((table) => (
               <div
                 key={table.id}
-                className="rounded-2xl border border-[#241A14]/10 bg-white p-4 text-center"
+                className="rounded-2xl bg-white p-4 text-center shadow-[0_4px_18px_rgba(18,17,17,0.05)]"
               >
-                <p className="font-[family-name:var(--font-display)] text-2xl italic text-[#241A14]">
+                <p className="font-[family-name:var(--font-display)] text-2xl italic">
                   {table.table_number}
                 </p>
-                <p className="mt-1 text-xs text-[#241A14]/50">{table.status}</p>
+                <p className="mt-1 text-xs text-[#121111]/45">{table.status}</p>
                 <div className="mt-2 flex justify-center gap-3">
                   <button
                     onClick={() => window.open(`/admin/qr-print?table=${table.table_number}`, '_blank')}
-                    className="text-xs text-[#241A14] underline"
+                    className="text-xs underline"
                   >
                     Print QR
                   </button>
                   <button
                     onClick={() => deleteTable(table.id)}
-                    className="text-xs text-[#A6341D]"
+                    className="text-xs text-red-600"
                   >
                     Delete
                   </button>
@@ -525,37 +519,37 @@ export default function AdminPage() {
       )}
 
       {activeTab === 'settings' && (
-        <div className="p-6">
-          <div className="max-w-md rounded-2xl border border-[#241A14]/10 bg-white p-5">
-            <h2 className="mb-4 font-[family-name:var(--font-display)] text-lg italic text-[#241A14]">
+        <div className="mx-auto max-w-4xl p-6">
+          <div className="max-w-md rounded-2xl bg-white p-5 shadow-[0_4px_18px_rgba(18,17,17,0.05)]">
+            <h2 className="mb-4 font-[family-name:var(--font-display)] text-lg italic">
               Change Passwords
             </h2>
 
-            <label className="mb-1 block text-xs font-medium text-[#241A14]/60">Kitchen password</label>
+            <label className="mb-1 block text-xs font-medium text-[#121111]/55">Kitchen password</label>
             <input
               value={settings.kitchen_password}
               onChange={(e) => setSettings({ ...settings, kitchen_password: e.target.value })}
-              className="mb-3 w-full rounded-lg border border-[#241A14]/20 px-3 py-2 text-sm"
+              className="mb-3 w-full rounded-lg border border-[#121111]/15 px-3 py-2 text-sm"
             />
 
-            <label className="mb-1 block text-xs font-medium text-[#241A14]/60">Manager password</label>
+            <label className="mb-1 block text-xs font-medium text-[#121111]/55">Manager password</label>
             <input
               value={settings.manager_password}
               onChange={(e) => setSettings({ ...settings, manager_password: e.target.value })}
-              className="mb-3 w-full rounded-lg border border-[#241A14]/20 px-3 py-2 text-sm"
+              className="mb-3 w-full rounded-lg border border-[#121111]/15 px-3 py-2 text-sm"
             />
 
-            <label className="mb-1 block text-xs font-medium text-[#241A14]/60">Admin password</label>
+            <label className="mb-1 block text-xs font-medium text-[#121111]/55">Admin password</label>
             <input
               value={settings.admin_password}
               onChange={(e) => setSettings({ ...settings, admin_password: e.target.value })}
-              className="mb-3 w-full rounded-lg border border-[#241A14]/20 px-3 py-2 text-sm"
+              className="mb-3 w-full rounded-lg border border-[#121111]/15 px-3 py-2 text-sm"
             />
 
             <button
               onClick={saveSettings}
               disabled={savingSettings}
-              className="mt-2 rounded-full bg-[#241A14] px-5 py-2.5 text-sm font-semibold text-[#F3E9D8]"
+              className="mt-2 rounded-full bg-[#ea811b] px-5 py-2.5 text-sm font-bold text-white"
             >
               {savingSettings ? 'Saving…' : 'Save Passwords'}
             </button>

@@ -9,10 +9,10 @@ const supabase = createClient(
 )
 
 const STATUS_STYLES = {
-  pending: { label: 'New', bg: 'bg-[#E8A93A]/15', text: 'text-[#946A1C]', dot: 'bg-[#E8A93A]' },
-  preparing: { label: 'Preparing', bg: 'bg-[#8B5FA8]/15', text: 'text-[#6B3F87]', dot: 'bg-[#8B5FA8]' },
-  ready: { label: 'Ready', bg: 'bg-[#55684A]/15', text: 'text-[#3E4D36]', dot: 'bg-[#55684A]' },
-  served: { label: 'Served', bg: 'bg-[#241A14]/10', text: 'text-[#241A14]/50', dot: 'bg-[#241A14]/40' },
+  pending: { label: 'New', bg: 'bg-[#ea811b]/10', text: 'text-[#b35e0f]', dot: 'bg-[#ea811b]' },
+  preparing: { label: 'Preparing', bg: 'bg-[#8B5FA8]/10', text: 'text-[#6B3F87]', dot: 'bg-[#8B5FA8]' },
+  ready: { label: 'Ready', bg: 'bg-[#55684A]/10', text: 'text-[#3E4D36]', dot: 'bg-[#55684A]' },
+  served: { label: 'Served', bg: 'bg-[#121111]/8', text: 'text-[#121111]/45', dot: 'bg-[#121111]/35' },
 }
 
 export default function ManagerPage() {
@@ -20,11 +20,22 @@ export default function ManagerPage() {
   const [loading, setLoading] = useState(true)
   const [now, setNow] = useState(new Date())
 
+  const AUTO_CLOSE_HOURS = 2
+
+  async function sweepStaleTables() {
+    const cutoff = new Date(Date.now() - AUTO_CLOSE_HOURS * 60 * 60 * 1000).toISOString()
+    await supabase
+      .from('restaurant_tables')
+      .update({ status: 'closed' })
+      .eq('status', 'occupied')
+      .lt('occupied_since', cutoff)
+  }
+
   async function fetchOrders() {
     const { data, error } = await supabase
       .from('orders')
       .select(`
-                id,
+        id,
         status,
         total,
         created_at,
@@ -50,11 +61,14 @@ export default function ManagerPage() {
 
   useEffect(() => {
     fetchOrders()
-    const interval = setInterval(fetchOrders, 4000)
+    sweepStaleTables()
+    const interval = setInterval(() => {
+      fetchOrders()
+      sweepStaleTables()
+    }, 4000)
     return () => clearInterval(interval)
   }, [])
 
-  // Ticks every 15 seconds so "time ago" labels stay fresh
   useEffect(() => {
     const clock = setInterval(() => setNow(new Date()), 15000)
     return () => clearInterval(clock)
@@ -83,19 +97,19 @@ export default function ManagerPage() {
     return tableOrders.some((o) => o.bill_requested)
   }
 
-    function minutesAgo(createdAt, servedAt) {
+  function minutesAgo(createdAt, servedAt) {
     const endTime = servedAt ? new Date(servedAt) : now
     return Math.max(0, Math.floor((endTime.getTime() - new Date(createdAt).getTime()) / 60000))
   }
 
   function waitTimeColor(mins, isReady) {
-    if (isReady) return 'text-[#241A14]/40'
-    if (mins >= 20) return 'text-[#A6341D] font-semibold'
-    if (mins >= 10) return 'text-[#946A1C] font-semibold'
-    return 'text-[#241A14]/50'
+    if (isReady) return 'text-[#121111]/40'
+    if (mins >= 20) return 'text-red-600 font-semibold'
+    if (mins >= 10) return 'text-[#b35e0f] font-semibold'
+    return 'text-[#121111]/45'
   }
 
-    function longestWait(tableOrders) {
+  function longestWait(tableOrders) {
     const activeOrders = tableOrders.filter((o) => !['ready', 'served'].includes(o.status))
     const source = activeOrders.length > 0 ? activeOrders : tableOrders
     return Math.max(...source.map((o) => minutesAgo(o.created_at, o.served_at)))
@@ -132,8 +146,8 @@ export default function ManagerPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#F3E9D8]">
-        <p className="font-[family-name:var(--font-body)] text-[#241A14]">Loading dashboard…</p>
+      <div className="flex h-screen items-center justify-center bg-[#f1f2f0]">
+        <p className="font-[family-name:var(--font-body)] text-[#121111]">Loading dashboard…</p>
       </div>
     )
   }
@@ -152,41 +166,41 @@ export default function ManagerPage() {
   const totalBillRequests = tableNumbers.filter((t) => tableHasBillRequest(grouped[t])).length
 
   return (
-    <div className="min-h-screen bg-[#F3E9D8] font-[family-name:var(--font-body)]">
+    <div className="min-h-screen bg-[#f1f2f0] font-[family-name:var(--font-body)] text-[#121111]">
       {/* Header */}
-      <div className="bg-[#241A14] px-6 pb-6 pt-6">
-        <div className="flex items-center justify-between">
-          <h1 className="font-[family-name:var(--font-display)] text-2xl italic text-[#F3E9D8]">
-            Manager Dashboard
-          </h1>
+      <div className="bg-[#121111] px-6 pb-6 pt-6 text-white">
+        <div className="mx-auto flex max-w-5xl items-center justify-between">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#ea811b]">Katlang Zaika</p>
+            <h1 className="mt-1 font-[family-name:var(--font-display)] text-2xl italic">Manager Dashboard</h1>
+          </div>
           <button
             onClick={logout}
-            className="rounded-full border border-[#F3E9D8]/30 px-4 py-1.5 text-xs font-medium text-[#F3E9D8] transition hover:bg-[#F3E9D8]/10"
+            className="rounded-full border border-white/25 px-4 py-1.5 text-xs font-medium text-white transition hover:bg-white/10"
           >
             Logout
           </button>
         </div>
 
-        <div className="mt-5 grid grid-cols-3 gap-3">
-          <div className="rounded-xl bg-[#F3E9D8]/10 px-4 py-3">
-            <p className="text-2xl font-semibold text-[#F3E9D8]">{totalActiveTables}</p>
-            <p className="text-xs text-[#F3E9D8]/60">Active tables</p>
+        <div className="mx-auto mt-5 grid max-w-5xl grid-cols-3 gap-3">
+          <div className="rounded-xl bg-white/10 px-4 py-3">
+            <p className="text-2xl font-bold">{totalActiveTables}</p>
+            <p className="text-xs text-white/55">Active tables</p>
           </div>
-          <div className="rounded-xl bg-[#F3E9D8]/10 px-4 py-3">
-            <p className="text-2xl font-semibold text-[#D9A441]">{totalPendingItems}</p>
-            <p className="text-xs text-[#F3E9D8]/60">New orders</p>
+          <div className="rounded-xl bg-white/10 px-4 py-3">
+            <p className="text-2xl font-bold text-[#ea811b]">{totalPendingItems}</p>
+            <p className="text-xs text-white/55">New orders</p>
           </div>
-          <div className="rounded-xl bg-[#F3E9D8]/10 px-4 py-3">
-            <p className="text-2xl font-semibold text-[#E58B78]">{totalBillRequests}</p>
-            <p className="text-xs text-[#F3E9D8]/60">Bill requests</p>
+          <div className="rounded-xl bg-white/10 px-4 py-3">
+            <p className="text-2xl font-bold text-red-300">{totalBillRequests}</p>
+            <p className="text-xs text-white/55">Bill requests</p>
           </div>
         </div>
       </div>
 
-      {/* Table cards */}
-      <div className="p-5">
+      <div className="mx-auto max-w-5xl p-5">
         {tableNumbers.length === 0 ? (
-          <p className="mt-10 text-center text-sm text-[#241A14]/50">
+          <p className="mt-10 text-center text-sm text-[#121111]/45">
             No active tables right now.
           </p>
         ) : (
@@ -200,34 +214,32 @@ export default function ManagerPage() {
               return (
                 <div
                   key={tableNum}
-                  className={`rounded-2xl border bg-white p-4 shadow-sm ${
-                    requested ? 'border-[#A6341D]' : 'border-[#241A14]/10'
+                  className={`rounded-2xl border bg-white p-4 shadow-[0_4px_18px_rgba(18,17,17,0.05)] ${
+                    requested ? 'border-red-300' : 'border-transparent'
                   }`}
                 >
-                  {/* Table header */}
                   <div className="flex items-center justify-between">
-                    <h2 className="font-[family-name:var(--font-display)] text-xl italic text-[#241A14]">
+                    <h2 className="font-[family-name:var(--font-display)] text-xl italic">
                       Table {tableNum}
                     </h2>
                     <div className="flex items-center gap-2">
                       {waitMins >= 10 && (
                         <span
                           className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                            waitMins >= 20 ? 'bg-[#A6341D]/10 text-[#A6341D]' : 'bg-[#E8A93A]/15 text-[#946A1C]'
+                            waitMins >= 20 ? 'bg-red-50 text-red-600' : 'bg-[#ea811b]/10 text-[#b35e0f]'
                           }`}
                         >
                           {waitMins}m waiting
                         </span>
                       )}
                       {requested && (
-                        <span className="rounded-full bg-[#A6341D] px-3 py-1 text-xs font-semibold text-white">
+                        <span className="rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white">
                           Bill requested
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Orders for this table */}
                   <div className="mt-3 space-y-3">
                     {tableOrders.map((order) => {
                       const style = STATUS_STYLES[order.status] || STATUS_STYLES.pending
@@ -239,9 +251,9 @@ export default function ManagerPage() {
                       const mins = minutesAgo(order.created_at, order.served_at)
 
                       return (
-                        <div key={order.id} className="rounded-xl bg-[#F3E9D8]/60 p-3">
+                        <div key={order.id} className="rounded-xl bg-[#f1f2f0] p-3">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs text-[#241A14]/50">
+                            <span className="text-xs text-[#121111]/45">
                               Order #{order.id} · {orderTime}
                             </span>
                             <span
@@ -260,12 +272,12 @@ export default function ManagerPage() {
                             {order.order_items.map((item) => (
                               <li
                                 key={item.id}
-                                className="flex justify-between text-sm text-[#241A14]"
+                                className="flex justify-between text-sm"
                               >
                                 <span>
                                   {item.quantity}× {item.menu_items?.name}
                                 </span>
-                                <span className="text-[#241A14]/60">
+                                <span className="text-[#121111]/45">
                                   Rs. {Number(item.menu_items?.price || 0) * Number(item.quantity || 0)}
                                 </span>
                               </li>
@@ -276,19 +288,18 @@ export default function ManagerPage() {
                     })}
                   </div>
 
-                  {/* Total + actions */}
-                  <div className="mt-4 flex items-center justify-between border-t border-[#241A14]/10 pt-3">
-                    <span className="text-lg font-semibold text-[#A6341D]">Rs. {total}</span>
+                  <div className="mt-4 flex items-center justify-between border-t border-[#121111]/10 pt-3">
+                    <span className="text-lg font-bold text-[#ea811b]">Rs. {total}</span>
                     <div className="flex gap-2">
                       <button
                         onClick={() => printBill(tableNum)}
-                        className="rounded-full border border-[#241A14]/20 px-3 py-2 text-xs font-medium text-[#241A14] transition active:scale-95"
+                        className="rounded-full border border-[#121111]/15 px-3 py-2 text-xs font-medium transition active:scale-95"
                       >
                         Print Bill
                       </button>
                       <button
                         onClick={() => markAsPaid(tableOrders)}
-                        className="rounded-full bg-[#241A14] px-4 py-2 text-xs font-semibold text-[#F3E9D8] transition active:scale-95"
+                        className="rounded-full bg-[#121111] px-4 py-2 text-xs font-semibold text-white transition active:scale-95"
                       >
                         Mark as Paid
                       </button>
