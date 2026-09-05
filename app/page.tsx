@@ -413,29 +413,24 @@ function MenuPageInner() {
   if (orderConfirmed) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-[#121111] px-6 text-center">
-        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#ea811b] animate-[pop_0.4s_ease-out]">
-          <svg
-            width="36"
-            height="36"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#ffffff"
-            strokeWidth="3"
-          >
-            <path
-              d="M5 13l4 4L19 7"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#ea811b] text-4xl animate-[pop_0.4s_ease-out]">
+          {orderingAllowed ? (
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3">
+              <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          ) : (
+            <span>🙌</span>
+          )}
         </div>
 
         <h1 className="font-[family-name:var(--font-display)] text-3xl italic text-white">
-          Order sent to the kitchen
+          {orderingAllowed ? 'Order sent to the kitchen' : 'See you soon! 👋'}
         </h1>
 
         <p className="mt-2 max-w-xs font-[family-name:var(--font-body)] text-sm text-white/65">
-          Sit back and relax — we&apos;ll bring it out shortly.
+          {orderingAllowed
+            ? "Sit back and relax — we'll bring it out shortly."
+            : 'Hope you enjoyed every bite.'}
         </p>
 
         {orderingAllowed ? (
