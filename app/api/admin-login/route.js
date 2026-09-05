@@ -1,9 +1,17 @@
 import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+)
 
 export async function POST(request) {
   const { password } = await request.json()
 
-  if (password === process.env.ADMIN_PASSWORD) {
+  const { data } = await supabase.from('app_settings').select('admin_password').single()
+
+  if (data && password === data.admin_password) {
     const response = NextResponse.json({ success: true })
     response.cookies.set('admin_auth', 'true', {
       httpOnly: true,

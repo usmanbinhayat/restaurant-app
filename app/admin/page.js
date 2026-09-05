@@ -19,6 +19,9 @@ const EMPTY_ITEM = {
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('menu')
+    const [settings, setSettings] = useState({ kitchen_password: '', manager_password: '', admin_password: '' })
+  const [settingsId, setSettingsId] = useState(null)
+  const [savingSettings, setSavingSettings] = useState(false)
   const [items, setItems] = useState([])
   const [tables, setTables] = useState([])
   const [loading, setLoading] = useState(true)
@@ -29,7 +32,36 @@ export default function AdminPage() {
   const [editingId, setEditingId] = useState(null)
   const [editItem, setEditItem] = useState(EMPTY_ITEM)
   const [uploadingEditId, setUploadingEditId] = useState(null)
+  async function fetchSettings() {
+    const { data } = await supabase.from('app_settings').select('*').single()
+    if (data) {
+      setSettings({
+        kitchen_password: data.kitchen_password || '',
+        manager_password: data.manager_password || '',
+        admin_password: data.admin_password || '',
+      })
+      setSettingsId(data.id)
+    }
+  }
 
+  async function saveSettings() {
+    setSavingSettings(true)
+    const { error } = await supabase
+      .from('app_settings')
+      .update({
+        kitchen_password: settings.kitchen_password,
+        manager_password: settings.manager_password,
+        admin_password: settings.admin_password,
+      })
+      .eq('id', settingsId)
+
+    if (error) {
+      alert('Error saving passwords: ' + error.message)
+    } else {
+      alert('Passwords updated successfully.')
+    }
+    setSavingSettings(false)
+  }
   async function fetchAll() {
         const { data: itemData } = await supabase
       .from('menu_items')
@@ -48,6 +80,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     fetchAll()
+    fetchSettings()
   }, [])
 
   async function logout() {
@@ -162,6 +195,14 @@ export default function AdminPage() {
     }
     fetchAll()
   }
+  
+  async function toggleAvailable(item) {
+    await supabase
+      .from('menu_items')
+      .update({ available: !item.available })
+      .eq('id', item.id)
+    fetchAll()
+  }
 
     async function moveItem(item, direction) {
     const categoryItems = items
@@ -247,6 +288,12 @@ export default function AdminPage() {
           className={`text-sm font-medium ${activeTab === 'tables' ? 'border-b-2 border-[#A6341D] pb-1 text-[#241A14]' : 'text-[#241A14]/50'}`}
         >
           Tables
+        </button>
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={`text-sm font-medium ${activeTab === 'settings' ? 'border-b-2 border-[#A6341D] pb-1 text-[#241A14]' : 'text-[#241A14]/50'}`}
+        >
+          Settings
         </button>
       </div>
 
@@ -430,7 +477,7 @@ export default function AdminPage() {
         </div>
       )}
 
-      {activeTab === 'tables' && (
+            {activeTab === 'tables' && (
         <div className="p-6">
           <div className="mb-5 flex gap-3">
             <button
@@ -473,6 +520,45 @@ export default function AdminPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'settings' && (
+        <div className="p-6">
+          <div className="max-w-md rounded-2xl border border-[#241A14]/10 bg-white p-5">
+            <h2 className="mb-4 font-[family-name:var(--font-display)] text-lg italic text-[#241A14]">
+              Change Passwords
+            </h2>
+
+            <label className="mb-1 block text-xs font-medium text-[#241A14]/60">Kitchen password</label>
+            <input
+              value={settings.kitchen_password}
+              onChange={(e) => setSettings({ ...settings, kitchen_password: e.target.value })}
+              className="mb-3 w-full rounded-lg border border-[#241A14]/20 px-3 py-2 text-sm"
+            />
+
+            <label className="mb-1 block text-xs font-medium text-[#241A14]/60">Manager password</label>
+            <input
+              value={settings.manager_password}
+              onChange={(e) => setSettings({ ...settings, manager_password: e.target.value })}
+              className="mb-3 w-full rounded-lg border border-[#241A14]/20 px-3 py-2 text-sm"
+            />
+
+            <label className="mb-1 block text-xs font-medium text-[#241A14]/60">Admin password</label>
+            <input
+              value={settings.admin_password}
+              onChange={(e) => setSettings({ ...settings, admin_password: e.target.value })}
+              className="mb-3 w-full rounded-lg border border-[#241A14]/20 px-3 py-2 text-sm"
+            />
+
+            <button
+              onClick={saveSettings}
+              disabled={savingSettings}
+              className="mt-2 rounded-full bg-[#241A14] px-5 py-2.5 text-sm font-semibold text-[#F3E9D8]"
+            >
+              {savingSettings ? 'Saving…' : 'Save Passwords'}
+            </button>
           </div>
         </div>
       )}
